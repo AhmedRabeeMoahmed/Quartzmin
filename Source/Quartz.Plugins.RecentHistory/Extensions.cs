@@ -1,4 +1,5 @@
-﻿
+﻿using System;
+
 namespace Quartz.Plugins.RecentHistory
 {
     public static class Extensions

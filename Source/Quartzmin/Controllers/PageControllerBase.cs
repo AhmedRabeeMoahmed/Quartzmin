@@ -6,25 +6,31 @@ using System.Threading;
 using System.Threading.Tasks;
 using Quartzmin.Models;
 using Quartz;
+using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using JsonSerializerOptions = System.Text.Json.JsonSerializerOptions;
+using Quartz.Plugins.RecentHistory;
+using Quartz.Spi;
 
 namespace Quartzmin.Controllers
 {
-    #region Target-Specific Directives
-
-#if NETSTANDARD
-    using Microsoft.AspNetCore.Mvc;
-    using Microsoft.Extensions.Primitives;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Serialization;
 
     public abstract partial class PageControllerBase : Microsoft.AspNetCore.Mvc.ControllerBase
     {
-        private static readonly JsonSerializerSettings _serializerSettings = new JsonSerializerSettings()
+        private static readonly JsonSerializerOptions _serializerSettings = new JsonSerializerOptions()
         {
-            ContractResolver = new DefaultContractResolver(), // PascalCase as default
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = null
         };
 
-        protected Services Services => (Services) Request.HttpContext.Items[typeof(Services)];
+        protected Services Services => (Services)Request.HttpContext.Items[typeof(Services)];
+
+        protected IExecutionHistoryStore histStore;
+        protected ISchedulerPlugin _executionHistoryPlugin;
+
         protected string GetRouteData(string key) => RouteData.Values[key].ToString();
         protected IActionResult Json(object content) => new JsonResult(content, _serializerSettings);
 
@@ -36,60 +42,29 @@ namespace Quartzmin.Controllers
             return values == StringValues.Empty ? (IEnumerable<string>)null : values;
         }
     }
-#endif
-#if NETFRAMEWORK
-    using IActionResult = System.Web.Http.IHttpActionResult;
-    using System.Net.Http;
-    using System.Web.Http.Results;
-
-    public abstract partial class PageControllerBase : System.Web.Http.ApiController
-    {
-        protected Services Services => Request.GetOwinContext().Get<Services>(Services.ContextKey);
-        protected string GetRouteData(string key) => ControllerContext.RouteData.Values[key].ToString();
-        protected IActionResult Json(object content) => base.Json(content);
-
-        private class ContentResult : IActionResult
-        {
-            public string Content { get; set; }
-            public string ContentType { get; set; }
-            public DateTimeOffset? LastModified { get; set; }
-            public string ETag { get; set; }
-
-            public Task<HttpResponseMessage> ExecuteAsync(CancellationToken cancellationToken)
-            {
-                var msg = new HttpResponseMessage() { Content = new StringContent(Content) };
-                msg.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(ContentType);
-
-                if (!string.IsNullOrEmpty(ETag))
-                    msg.Headers.ETag = new System.Net.Http.Headers.EntityTagHeaderValue(ETag);
-
-                if (LastModified != null)
-                    msg.Content.Headers.LastModified = LastModified;
-                
-                return Task.FromResult(msg);
-            }
-        }
-
-        protected IActionResult NoContent() => new StatusCodeResult(System.Net.HttpStatusCode.NoContent, Request);
-        protected IActionResult NotModified() => new StatusCodeResult(System.Net.HttpStatusCode.NotModified, Request);
-
-        protected IEnumerable<string> GetHeader(string key)
-        {
-            if (Request.Headers.TryGetValues(key, out var values))
-                return values;
-            else
-                return null;
-        }
-
-    }
-#endif
-    #endregion
 
     public abstract partial class PageControllerBase
     {
         protected IScheduler Scheduler => Services.Scheduler;
 
         protected dynamic ViewBag { get; } = new ExpandoObject();
+
+        public PageControllerBase()
+        {
+
+        }
+        public PageControllerBase(IExecutionHistoryStore HistStore, ISchedulerPlugin executionHistoryPlugin)
+        {
+            histStore = HistStore;
+            _executionHistoryPlugin = executionHistoryPlugin;
+        }
+        
+        public virtual async Task<IActionResult> Index()
+        {
+            await _executionHistoryPlugin.Initialize("RecentHistoryListener", Scheduler);
+
+            return View(null);
+        }
 
         internal class Page
         {
@@ -143,18 +118,14 @@ namespace Quartzmin.Controllers
 
         public IActionResult TextFile(string content, string contentType, DateTime lastModified, string etag)
         {
-#if NETSTANDARD
+
             Response.Headers.Add("Last-Modified", lastModified.ToUniversalTime().ToString("R"));
             Response.Headers.Add("ETag", etag);
-#endif
+
             return new ContentResult()
             {
                 Content = content,
                 ContentType = contentType,
-#if NETFRAMEWORK
-                ETag = etag,
-                LastModified = lastModified
-#endif
             };
         }
 

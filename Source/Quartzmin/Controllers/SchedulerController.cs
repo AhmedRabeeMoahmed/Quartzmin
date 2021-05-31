@@ -8,25 +8,23 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Globalization;
-
-#region Target-Specific Directives
-#if NETSTANDARD
 using Microsoft.AspNetCore.Mvc;
-#endif
-#if NETFRAMEWORK
-using System.Web.Http;
-using IActionResult = System.Web.Http.IHttpActionResult;
-#endif
-#endregion
+using Quartz.Spi;
 
 namespace Quartzmin.Controllers
 {
     public class SchedulerController : PageControllerBase
     {
-        [HttpGet]
-        public async Task<IActionResult> Index()
+        public SchedulerController(IExecutionHistoryStore HistStore, ISchedulerPlugin executionHistoryPlugin):
+       base(HistStore, executionHistoryPlugin)
         {
-            var histStore = Scheduler.Context.GetExecutionHistoryStore();
+        }
+
+        [HttpGet]
+        public override async Task<IActionResult> Index()
+        {
+            await base.Index();
+            //var histStore = Scheduler.Context.GetExecutionHistoryStore();
             var metadata = await Scheduler.GetMetaData();
             var jobKeys = await Scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
             var triggerKeys = await Scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
@@ -38,15 +36,18 @@ namespace Quartzmin.Controllers
             try
             {
                 pausedJobGroups = await GetGroupPauseState(await Scheduler.GetJobGroupNames(), async x => await Scheduler.IsJobGroupPaused(x));
-            } catch (NotImplementedException) { }
+            }
+            catch (NotImplementedException) { }
 
-            try {
+            try
+            {
                 pausedTriggerGroups = await GetGroupPauseState(await Scheduler.GetTriggerGroupNames(), async x => await Scheduler.IsTriggerGroupPaused(x));
-            } catch (NotImplementedException) { }
+            }
+            catch (NotImplementedException) { }
 
             int? failedJobs = null;
             int executedJobs = metadata.NumberOfJobsExecuted;
-            
+
             if (histStore != null)
             {
                 execHistory = await histStore?.FilterLast(10);

@@ -7,24 +7,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
-#region Target-Specific Directives
-#if NETSTANDARD
 using Microsoft.AspNetCore.Mvc;
-#endif
-#if NETFRAMEWORK
-using System.Web.Http;
-using IActionResult = System.Web.Http.IHttpActionResult;
-#endif
-#endregion
+using Quartz.Spi;
 
 namespace Quartzmin.Controllers
 {
     public class TriggersController : PageControllerBase
     {
-        [HttpGet]
-        public async Task<IActionResult> Index()
+        public TriggersController(IExecutionHistoryStore HistStore, ISchedulerPlugin executionHistoryPlugin) :
+base(HistStore, executionHistoryPlugin)
         {
+        }
+
+        [HttpGet]
+        public new async Task<IActionResult> Index()
+        {
+            await _executionHistoryPlugin.Initialize("RecentHistoryListener", Scheduler);
             var keys = (await Scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup())).OrderBy(x => x.ToString());
             var list = new List<TriggerListItem>();
 
@@ -86,7 +84,7 @@ namespace Quartzmin.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(string name, string group, bool clone = false)
         {
-            if (!EnsureValidKey(name, group)) return BadRequest();
+            if (!EnsureValidKey(name, group)) return new BadRequestResult();
 
             var key = new TriggerKey(name, group);
             var trigger = await GetTrigger(key);
@@ -146,7 +144,7 @@ namespace Quartzmin.Controllers
         {
             var triggerModel = model.Trigger;
             var jobDataMap = (await Request.GetJobDataMapForm()).GetModel(Services);
-            
+
             var result = new ValidationResult();
 
             model.Validate(result.Errors);
@@ -194,46 +192,46 @@ namespace Quartzmin.Controllers
         [HttpPost, JsonErrorResponse]
         public async Task<IActionResult> Delete([FromBody] KeyModel model)
         {
-            if (!EnsureValidKey(model)) return BadRequest();
+            if (!EnsureValidKey(model)) return new BadRequestResult();
 
             var key = model.ToTriggerKey();
 
             if (!await Scheduler.UnscheduleJob(key))
                 throw new InvalidOperationException("Cannot unschedule job " + key);
 
-            return NoContent();
+            return new EmptyResult();
         }
 
         [HttpPost, JsonErrorResponse]
         public async Task<IActionResult> Resume([FromBody] KeyModel model)
         {
-            if (!EnsureValidKey(model)) return BadRequest();
+            if (!EnsureValidKey(model)) return new BadRequestResult();
             await Scheduler.ResumeTrigger(model.ToTriggerKey());
-            return NoContent();
+            return new EmptyResult();
         }
 
         [HttpPost, JsonErrorResponse]
         public async Task<IActionResult> Pause([FromBody] KeyModel model)
         {
-            if (!EnsureValidKey(model)) return BadRequest();
+            if (!EnsureValidKey(model)) return new BadRequestResult();
             await Scheduler.PauseTrigger(model.ToTriggerKey());
-            return NoContent();
+            return new EmptyResult();
         }
 
         [HttpPost, JsonErrorResponse]
         public async Task<IActionResult> PauseJob([FromBody] KeyModel model)
         {
-            if (!EnsureValidKey(model)) return BadRequest();
+            if (!EnsureValidKey(model)) return new BadRequestResult();
             await Scheduler.PauseJob(model.ToJobKey());
-            return NoContent();
+            return new EmptyResult();
         }
 
         [HttpPost, JsonErrorResponse]
         public async Task<IActionResult> ResumeJob([FromBody] KeyModel model)
         {
-            if (!EnsureValidKey(model)) return BadRequest();
+            if (!EnsureValidKey(model)) return new BadRequestResult();
             await Scheduler.ResumeJob(model.ToJobKey());
-            return NoContent();
+            return new EmptyResult();
         }
 
         [HttpPost, JsonErrorResponse]
@@ -286,25 +284,30 @@ namespace Quartzmin.Controllers
         [HttpGet, JsonErrorResponse]
         public async Task<IActionResult> AdditionalData()
         {
-            var keys = await Scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
-            var history = await Scheduler.Context.GetExecutionHistoryStore().FilterLastOfEveryTrigger(10);
-            var historyByTrigger = history.ToLookup(x => x.Trigger);
-
             var list = new List<object>();
-            foreach (var key in keys)
+
+            if (histStore != null)
             {
-                list.Add(new 
+                var keys = await Scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+                //var history = await HistoryStore.FilterLastOfEveryTrigger(10);
+                var history = await histStore.FilterLastOfEveryJob(10);
+                var historyByTrigger = history.ToLookup(x => x.Trigger);
+
+                foreach (var key in keys)
                 {
-                    TriggerName = key.Name,
-                    TriggerGroup = key.Group,
-                    History = historyByTrigger.TryGet(key.ToString()).ToHistogram(),
-                });
+                    list.Add(new
+                    {
+                        TriggerName = key.Name,
+                        TriggerGroup = key.Group,
+                        History = historyByTrigger.TryGet(key.ToString()).ToHistogram(),
+                    });
+                }
             }
 
             return View(list);
         }
 
-        
+
         [HttpGet]
         public Task<IActionResult> Duplicate(string name, string group)
         {

@@ -7,18 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
-
-#region Target-Specific Directives
-#if NETSTANDARD
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http.Features;
-#endif
-#if NETFRAMEWORK
-using System.Web.Http;
-using IActionResult = System.Web.Http.IHttpActionResult;
-using System.Web.Http.Results;
-#endif
-#endregion
 
 namespace Quartzmin.Controllers
 {
@@ -37,7 +27,7 @@ namespace Quartzmin.Controllers
             }
             catch (JsonSerializationException ex) when (ex.Message.StartsWith("Could not create an instance of type"))
             {
-                return new BadRequestResult() { ReasonPhrase = "Unknown Type Handler" };
+                return new BadRequestResult();// { ReasonPhrase = "Unknown Type Handler" };
             }
 
             var dataMapForm = (await formData.GetJobDataMapForm(includeRowIndex: false)).SingleOrDefault(); // expected single row

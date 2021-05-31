@@ -7,24 +7,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
-#region Target-Specific Directives
-#if NETSTANDARD
 using Microsoft.AspNetCore.Mvc;
-#endif
-#if NETFRAMEWORK
-using System.Web.Http;
-using IActionResult = System.Web.Http.IHttpActionResult;
-#endif
-#endregion
+using Quartz.Spi;
 
 namespace Quartzmin.Controllers
 {
     public class JobsController : PageControllerBase
     {
-        [HttpGet]
-        public async Task<IActionResult> Index()
+        public JobsController(IExecutionHistoryStore HistStore, ISchedulerPlugin executionHistoryPlugin) :
+base(HistStore, executionHistoryPlugin)
         {
+        }
+
+        [HttpGet]
+        public new async Task<IActionResult> Index()
+        {
+            await _executionHistoryPlugin.Initialize("RecentHistoryListener", Scheduler);
             var keys = (await Scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup())).OrderBy(x => x.ToString());
             var list = new List<JobListItem>();
             var knownTypes = new List<string>();
@@ -142,7 +140,7 @@ namespace Quartzmin.Controllers
                 throw new InvalidOperationException("Job " + key + " not found.");
 
             return job;
-        } 
+        }
 
         [HttpPost, JsonErrorResponse]
         public async Task<IActionResult> Save([FromForm] JobViewModel model, bool trigger)
@@ -204,7 +202,8 @@ namespace Quartzmin.Controllers
         public async Task<IActionResult> AdditionalData()
         {
             var keys = await Scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
-            var history = await Scheduler.Context.GetExecutionHistoryStore().FilterLastOfEveryJob(10);
+            //var history = await Scheduler.Context.GetExecutionHistoryStore().FilterLastOfEveryJob(10);
+            var history = await histStore.FilterLastOfEveryJob(10);
             var historyByJob = history.ToLookup(x => x.Job);
 
             var list = new List<object>();
@@ -216,7 +215,8 @@ namespace Quartzmin.Controllers
 
                 list.Add(new
                 {
-                    JobName = key.Name, key.Group,
+                    JobName = key.Name,
+                    key.Group,
                     History = historyByJob.TryGet(key.ToString()).ToHistogram(),
                     NextFireTime = nextFires.Where(x => x != null).OrderBy(x => x).FirstOrDefault()?.ToDefaultFormat(),
                 });

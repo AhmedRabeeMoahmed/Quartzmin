@@ -7,24 +7,22 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Globalization;
-
-#region Target-Specific Directives
-#if NETSTANDARD
 using Microsoft.AspNetCore.Mvc;
-#endif
-#if NETFRAMEWORK
-using System.Web.Http;
-using IActionResult = System.Web.Http.IHttpActionResult;
-#endif
-#endregion
+using Quartz.Spi;
 
 namespace Quartzmin.Controllers
 {
     public class ExecutionsController : PageControllerBase
     {
-        [HttpGet]
-        public async Task<IActionResult> Index()
+        public ExecutionsController(IExecutionHistoryStore HistStore, ISchedulerPlugin executionHistoryPlugin) :
+base(HistStore, executionHistoryPlugin)
         {
+        }
+
+        [HttpGet]
+        public override async Task<IActionResult> Index()
+        {
+            await base.Index();
             var currentlyExecutingJobs = await Scheduler.GetCurrentlyExecutingJobs();
 
             var list = new List<object>();

@@ -3,32 +3,27 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
-#region Target-Specific Directives
-#if NETSTANDARD
 using Microsoft.AspNetCore.Mvc;
-#endif
-#if NETFRAMEWORK
-using System.Web.Http;
-using IActionResult = System.Web.Http.IHttpActionResult;
-#endif
-#endregion
+using Quartz.Spi;
 
 namespace Quartzmin.Controllers
 {
     public class HistoryController : PageControllerBase
-    {
-        [HttpGet]
-        public async Task<IActionResult> Index()
+     {
+        public HistoryController(IExecutionHistoryStore HistStore, ISchedulerPlugin executionHistoryPlugin) :
+base(HistStore, executionHistoryPlugin)
         {
-            var store = Scheduler.Context.GetExecutionHistoryStore();
+        }
 
-            ViewBag.HistoryEnabled = store != null;
+        [HttpGet]
+        public override async Task<IActionResult> Index()
+        {
+            ViewBag.HistoryEnabled = histStore != null;
 
-            if (store == null)
+            if (histStore == null)
                 return View(null);
 
-            IEnumerable<ExecutionHistoryEntry> history = await store.FilterLast(100);
+            IEnumerable<ExecutionHistoryEntry> history = await histStore.FilterLast(100);
 
             var list = new List<object>();
 

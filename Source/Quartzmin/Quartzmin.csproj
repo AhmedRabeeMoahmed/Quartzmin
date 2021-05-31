@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net452</TargetFrameworks>
+    <TargetFramework>net5.0</TargetFramework>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -24,42 +24,22 @@
     <RepositoryUrl>https://github.com/jlucansky/Quartzmin</RepositoryUrl>
   </PropertyGroup>
 
-  <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(TargetFramework)', '^net\d'))">
-    <DefineConstants>NETFRAMEWORK</DefineConstants>
-    <AssemblySearchPaths>$(AssemblySearchPaths);{GAC}</AssemblySearchPaths>
-  </PropertyGroup>
-  <PropertyGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(TargetFramework)', '^netstandard\d'))">
-    <DefineConstants>NETSTANDARD</DefineConstants>
-  </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Quartz.Plugins.RecentHistory\Quartz.Plugins.RecentHistory.csproj" />
+    <ProjectReference Include="..\SPICA.Enterprise.Jobs\SPICA.Enterprise.Jobs.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Handlebars.Net" Version="1.9.5" />
     <PackageReference Include="JsonSubTypes" Version="1.5.1" />
-    <PackageReference Include="Quartz" Version="3.0.7" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="5.0.0" />
+    <PackageReference Include="MySql.Data" Version="8.0.25" />
+    <PackageReference Include="Quartz" Version="3.3.2" />
+    <PackageReference Include="Quartz.Plugins" Version="3.3.2" />
+    <PackageReference Include="Quartz.Serialization.Json" Version="3.3.2" />
   </ItemGroup>
   
-  <ItemGroup Condition="$(DefineConstants.Contains('NETFRAMEWORK'))">
-    <Reference Include="System.Web" />
-    <Reference Include="System.ComponentModel.DataAnnotations" />
-    <PackageReference Include="Microsoft.AspNet.WebApi" Version="5.2.6" />
-    <PackageReference Include="Microsoft.AspNet.WebApi.Owin" Version="5.2.6" />
-    <PackageReference Include="Microsoft.Owin.StaticFiles" Version="2.1.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition="$(DefineConstants.Contains('NETSTANDARD'))">
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.DataAnnotations" Version="2.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Formatters.Json" Version="2.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.StaticFiles" Version="2.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics" Version="2.1.0" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="2.1.0" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="2.1.0" />
-  </ItemGroup>
-
   <ItemGroup>
     <None Include="..\..\LICENSE" Pack="true" PackagePath="" />
   </ItemGroup>

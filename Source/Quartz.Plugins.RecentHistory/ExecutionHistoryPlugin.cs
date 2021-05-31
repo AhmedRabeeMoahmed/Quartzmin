@@ -14,10 +14,15 @@ namespace Quartz.Plugins.RecentHistory
         public string Name { get; set; }
         public Type StoreType { get; set; }
 
+        public ExecutionHistoryPlugin(IExecutionHistoryStore store){
+             _store = store;
+        }
+
         public Task Initialize(string pluginName, IScheduler scheduler, CancellationToken cancellationToken = default(CancellationToken))
         {
             Name = pluginName;
             _scheduler = scheduler;
+             _store.SchedulerName = _scheduler.SchedulerName;
             _scheduler.ListenerManager.AddJobListener(this, EverythingMatcher<JobKey>.AllJobs());
             
             return Task.FromResult(0);
@@ -25,8 +30,6 @@ namespace Quartz.Plugins.RecentHistory
 
         public async Task Start(CancellationToken cancellationToken = default(CancellationToken))
         {
-            _store = _scheduler.Context.GetExecutionHistoryStore();
-
             if (_store == null)
             {
                 if (StoreType != null)
