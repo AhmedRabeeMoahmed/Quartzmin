@@ -9,7 +9,7 @@
 
 Quartzmin is powerful, easy to use web management tool for Quartz.NET
 
-Quartzmin can be used within your existing application with minimum effort as a Quartz.NET plugin when it automatically creates embedded web server. Or it can be plugged into your existing OWIN-based web application as a middleware.
+Quartzmin can be used within your existing application with minimum effort as a Quartz.NET plugin when it automatically creates embedded web server. Or it can be plugged into your existing .Net Core web application.
 
 > [Quartz.NET](https://www.quartz-scheduler.net) is a full-featured, open source job scheduling system that can be used from smallest apps to large scale enterprise systems.
 
@@ -43,8 +43,7 @@ To install Quartzmin, run the following command in the Package Manager Console
 PM> Install-Package Quartzmin
 ```
 ## Minimum requirements
-- .NET Framework 4.5.2 
-- .NET Standard 2.0
+- .NET 5.0
 
 ## Usage
 ### Embedded web server
@@ -75,33 +74,16 @@ Start Quartz.NET scheduler somewhere:
 StdSchedulerFactory.GetDefaultScheduler().Result.Start();
 ```
 
-### OWIN middleware
+### ASP.NET Core startup
 Add to your `Startup.cs` file:
 ```csharp
-public void Configuration(IAppBuilder app)
-{
-    app.UseQuartzmin(new QuartzminOptions()
-    {
-        Scheduler = StdSchedulerFactory.GetDefaultScheduler().Result
-    });
-}
-```
+  //Initialize Scheduler somewhere anf assign it to Quartzmin
+  IScheduler _Scheduler = InitializeScheduler("InstanceId","InstanceName").Result;
 
-### ASP.NET Core middleware
-Add to your `Startup.cs` file:
-```csharp
-public void ConfigureServices(IServiceCollection services)
-{
-    services.AddQuartzmin();
-}
-
-public void Configure(IApplicationBuilder app)
-{
-    app.UseQuartzmin(new QuartzminOptions()
-    {
-        Scheduler = StdSchedulerFactory.GetDefaultScheduler().Result
-    });
-}
+  app.UseQuartzmin(new QuartzminOptions()
+  {
+      Scheduler = _Scheduler
+  });
 ```
 
 ## Notes

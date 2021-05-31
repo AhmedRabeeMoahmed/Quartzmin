@@ -42,8 +42,6 @@ namespace Quartzmin
             //services.AddDirectoryBrowser();
             services.AddSingleton<IExecutionHistoryStore, InProcExecutionHistoryStore>();
             services.AddScoped<ISchedulerPlugin, ExecutionHistoryPlugin>();
-            //services.AddSingleton<IExecutionHistoryStore>(new InProcExecutionHistoryStore());
-            //services.AddSingleton(typeof(IExecutionHistoryStore), typeof(InProcExecutionHistoryStore));
             services.AddControllersWithViews();
             services.AddQuartz();
         }
@@ -101,9 +99,7 @@ namespace Quartzmin
                 ["quartz.jobStore.dataSource"] = "default",
                 ["quartz.jobStore.tablePrefix"] = "QRTZ_",
                 ["quartz.dataSource.default.provider"] = "MySql",
-                ["quartz.dataSource.default.connectionString"] = @"Server=localhost;Database=SPICA_Enterprise_Master;Uid=mysqluser;Pwd=spic@pop123",
-                // ["quartz.plugin.recentHistory.type"] = "Quartz.Plugins.RecentHistory.ExecutionHistoryPlugin, Quartz.Plugins.RecentHistory",
-                // ["quartz.plugin.recentHistory.storeType"] = "Quartz.Plugins.RecentHistory.Impl.InProcExecutionHistoryStore, Quartz.Plugins.RecentHistory"
+                ["quartz.dataSource.default.connectionString"] = @"Server=localhost;Database=QaurtzDB;Uid=user;Pwd=password",
             };
 
             ISchedulerFactory schedulerFactory = new StdSchedulerFactory(properties);
