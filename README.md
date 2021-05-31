@@ -61,9 +61,6 @@ Add to your `App.config` file:
   </configSections>
 
   <quartz>
-    <add key="quartz.plugin.quartzmin.type" value="Quartzmin.SelfHost.QuartzminPlugin, Quartzmin.SelfHost" />
-    <add key="quartz.plugin.quartzmin.url" value="http://localhost:5000" />
-      
     <add key="quartz.plugin.recentHistory.type" value="Quartz.Plugins.RecentHistory.ExecutionHistoryPlugin, Quartz.Plugins.RecentHistory" />
     <add key="quartz.plugin.recentHistory.storeType" value="Quartz.Plugins.RecentHistory.Impl.InProcExecutionHistoryStore, Quartz.Plugins.RecentHistory" />
   </quartz>
